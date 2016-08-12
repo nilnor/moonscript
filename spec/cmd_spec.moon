@@ -128,3 +128,29 @@ describe "moonc", ->
         "hello/world/directory"
       }, dirs
 
+describe "lint", ->
+  local lint
+  moon = require 'moon'
+
+  with_dev ->
+    lint = require "moonscript.cmd.lint"
+
+  messages = (output) ->
+    scan = output\gmatch('line (%d): ([^\n]+)')
+    [{line: tonumber(line), :msg} for line, msg in scan]
+
+  it 'detects unused variables', ->
+    code = 'used = 2\nfoo = 2\nreturn used'
+    res, err = lint.lint_code code, 'test', {}
+    assert.is_nil err
+    assert.same {
+      {line: 2, msg: 'assigned but unused `foo`'}
+    }, messages(res)
+
+  it 'detects global accesses', ->
+    code = 'used = hi_global!\nreturn used'
+    res, err = lint.lint_code code, 'test', {}
+    assert.is_nil err
+    assert.same {
+      {line: 1, msg: 'accessing global `hi_global`'}
+    }, messages(res)
